@@ -9,6 +9,7 @@ from torch import Tensor
 import torch
 import numpy as np
 
+import execution_context
 import folder_paths
 from comfy.model_base import SD21UNCLIP, SDXL, BaseModel, SDXLRefiner, SVD_img2vid, model_sampling, ModelType
 from comfy.model_management import xformers_enabled
@@ -344,20 +345,20 @@ folder_paths.add_model_folder_path(Folders.VIDEO_FORMATS, str(Path(__file__).par
 add_extension_to_folder_path(Folders.VIDEO_FORMATS, ".json")
 
 
-def get_available_motion_models():
-    return folder_paths.get_filename_list(Folders.ANIMATEDIFF_MODELS)
+def get_available_motion_models(context: execution_context.ExecutionContext):
+    return folder_paths.get_filename_list(context, Folders.ANIMATEDIFF_MODELS)
 
 
-def get_motion_model_path(model_name: str):
-    return folder_paths.get_full_path(Folders.ANIMATEDIFF_MODELS, model_name)
+def get_motion_model_path(context: execution_context.ExecutionContext, model_name: str):
+    return folder_paths.get_full_path(context, Folders.ANIMATEDIFF_MODELS, model_name)
 
 
-def get_available_motion_loras():
-    return folder_paths.get_filename_list(Folders.MOTION_LORA)
+def get_available_motion_loras(context: execution_context.ExecutionContext):
+    return folder_paths.get_filename_list(context, Folders.MOTION_LORA)
 
 
-def get_motion_lora_path(lora_name: str):
-    return folder_paths.get_full_path(Folders.MOTION_LORA, lora_name)
+def get_motion_lora_path(context: execution_context.ExecutionContext, lora_name: str):
+    return folder_paths.get_full_path(context, Folders.MOTION_LORA, lora_name)
 
 
 # modified from https://stackoverflow.com/questions/22058048/hashing-a-file-in-python

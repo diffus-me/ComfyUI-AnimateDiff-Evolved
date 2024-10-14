@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import execution_context
 import folder_paths
 import comfy.utils
 import comfy.sd
@@ -11,23 +12,26 @@ from .motion_lora import MotionLoraInfo, MotionLoraList
 
 class AnimateDiffLoraLoader:
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
-                "name": (get_available_motion_loras(),),
+                "name": (get_available_motion_loras(context),),
                 "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.001}),
             },
             "optional": {
                 "prev_motion_lora": ("MOTION_LORA",),
                 "autosize": ("ADEAUTOSIZE", {"padding": 30}),
-            }
+            },
+            "hidden": {
+                "context": "EXECUTION_CONTEXT"
+            },
         }
     
     RETURN_TYPES = ("MOTION_LORA",)
     CATEGORY = "Animate Diff 🎭🅐🅓"
     FUNCTION = "load_motion_lora"
 
-    def load_motion_lora(self, name: str, strength: float, prev_motion_lora: MotionLoraList=None, lora_name: str=None):
+    def load_motion_lora(self, name: str, strength: float, prev_motion_lora: MotionLoraList=None, lora_name: str=None, context: execution_context.ExecutionContext = None):
         if prev_motion_lora is None:
             prev_motion_lora = MotionLoraList()
         else:
@@ -35,7 +39,7 @@ class AnimateDiffLoraLoader:
         if lora_name is not None: # backwards compatibility
             name = lora_name
         # check if motion lora with name exists
-        lora_path = get_motion_lora_path(name)
+        lora_path = get_motion_lora_path(context, lora_name)
         if not Path(lora_path).is_file():
             raise FileNotFoundError(f"Motion lora with name '{name}' not found.")
         # create motion lora info to be loaded in AnimateDiff Loader

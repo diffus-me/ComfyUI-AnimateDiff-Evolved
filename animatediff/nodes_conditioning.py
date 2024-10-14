@@ -1,4 +1,6 @@
 import uuid
+
+import execution_context
 import folder_paths
 from typing import Union
 from torch import Tensor
@@ -428,26 +430,29 @@ class MaskableLoraLoader:
         self.loaded_lora = None
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
                 "model": ("MODEL",),
                 "clip": ("CLIP",),
-                "lora_name": (folder_paths.get_filename_list("loras"), ),
+                "lora_name": (folder_paths.get_filename_list(context, "loras"), ),
                 "strength_model": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01}),
                 "strength_clip": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01}),
-            }
+            },
+            "hidden": {
+                "context": "EXECUTION_CONTEXT"
+            },
         }
     
     RETURN_TYPES = ("MODEL", "CLIP", "LORA_HOOK")
     CATEGORY = "Animate Diff 🎭🅐🅓/conditioning/register lora hooks"
     FUNCTION = "load_lora"
 
-    def load_lora(self, model: Union[ModelPatcher, ModelPatcherAndInjector], clip: CLIP, lora_name: str, strength_model: float, strength_clip: float):
+    def load_lora(self, model: Union[ModelPatcher, ModelPatcherAndInjector], clip: CLIP, lora_name: str, strength_model: float, strength_clip: float, context: execution_context.ExecutionContext):
         if strength_model == 0 and strength_clip == 0:
             return (model, clip)
         
-        lora_path = folder_paths.get_full_path("loras", lora_name)
+        lora_path = folder_paths.get_full_path(context, "loras", lora_name)
         lora = None
         if self.loaded_lora is not None:
             if self.loaded_lora[0] == lora_path:
@@ -471,11 +476,11 @@ class MaskableLoraLoader:
 
 class MaskableLoraLoaderModelOnly(MaskableLoraLoader):
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
                 "model": ("MODEL",),
-                "lora_name": (folder_paths.get_filename_list("loras"), ),
+                "lora_name": (folder_paths.get_filename_list(context, "loras"), ),
                 "strength_model": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01}),
             }
         }
@@ -492,23 +497,26 @@ class MaskableLoraLoaderModelOnly(MaskableLoraLoader):
 
 class MaskableSDModelLoader:
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
                 "model": ("MODEL",),
                 "clip": ("CLIP",),
-                "ckpt_name": (folder_paths.get_filename_list("checkpoints"), ),
+                "ckpt_name": (folder_paths.get_filename_list(context, "checkpoints"), ),
                 "strength_model": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01}),
                 "strength_clip": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01}),
-            }
+            },
+            "hidden": {
+                "context": "EXECUTION_CONTEXT"
+            },
         }
     
     RETURN_TYPES = ("MODEL", "CLIP", "LORA_HOOK")
     CATEGORY = "Animate Diff 🎭🅐🅓/conditioning/register lora hooks"
     FUNCTION = "load_model_as_lora"
 
-    def load_model_as_lora(self, model: ModelPatcher, clip: CLIP, ckpt_name: str, strength_model: float, strength_clip: float):
-        ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
+    def load_model_as_lora(self, model: ModelPatcher, clip: CLIP, ckpt_name: str, strength_model: float, strength_clip: float, context: execution_context.ExecutionContext):
+        ckpt_path = folder_paths.get_full_path(context, "checkpoints", ckpt_name)
         out = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=True, embedding_directory=folder_paths.get_folder_paths("embeddings"))
         model_loaded = out[0]
         clip_loaded = out[1]
@@ -525,11 +533,11 @@ class MaskableSDModelLoader:
 
 class MaskableSDModelLoaderModelOnly(MaskableSDModelLoader):
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
                 "model": ("MODEL",),
-                "ckpt_name": (folder_paths.get_filename_list("checkpoints"), ),
+                "ckpt_name": (folder_paths.get_filename_list(context, "checkpoints"), ),
                 "strength_model": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01}),
             }
         }

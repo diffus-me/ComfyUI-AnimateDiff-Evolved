@@ -3,6 +3,8 @@ import os
 import torch
 
 import math
+
+import execution_context
 import folder_paths
 import copy
 import json
@@ -237,15 +239,18 @@ class ApplyAnimateDiffWithCameraCtrl:
 
 class LoadAnimateDiffModelWithCameraCtrl:
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
-                "model_name": (get_available_motion_models(),),
-                "camera_ctrl": (get_available_motion_models(),),
+                "model_name": (get_available_motion_models(context),),
+                "camera_ctrl": (get_available_motion_models(context),),
             },
             "optional": {
                 "ad_settings": ("AD_SETTINGS",),
-            }
+            },
+            "hidden": {
+                "context": "EXECUTION_CONTEXT"
+            },
         }
 
     RETURN_TYPES = ("MOTION_MODEL_ADE",)
@@ -253,9 +258,9 @@ class LoadAnimateDiffModelWithCameraCtrl:
     CATEGORY = "Animate Diff 🎭🅐🅓/② Gen2 nodes ②/CameraCtrl"
     FUNCTION = "load_camera_ctrl"
 
-    def load_camera_ctrl(self, model_name: str, camera_ctrl: str, ad_settings: AnimateDiffSettings=None):
-        loaded_motion_model = load_motion_module_gen2(model_name=model_name, motion_model_settings=ad_settings)
-        inject_camera_encoder_into_model(motion_model=loaded_motion_model, camera_ctrl_name=camera_ctrl)
+    def load_camera_ctrl(self, model_name: str, camera_ctrl: str, ad_settings: AnimateDiffSettings=None, context: execution_context.ExecutionContext = None):
+        loaded_motion_model = load_motion_module_gen2(context=context, model_name=model_name, motion_model_settings=ad_settings)
+        inject_camera_encoder_into_model(context=context, motion_model=loaded_motion_model, camera_ctrl_name=camera_ctrl)
         return (loaded_motion_model,)
 
 
@@ -296,22 +301,25 @@ class CameraCtrlADKeyframeNode:
 
 class LoadCameraPosesFromFile:
     @classmethod
-    def INPUT_TYPES(s):
-        input_dir = folder_paths.get_input_directory()
+    def INPUT_TYPES(s, user_hash: str):
+        input_dir = folder_paths.get_input_directory(user_hash)
         files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
         files = [f for f in files if f.endswith(".txt")]
         return {
             "required": {
                 "pose_filename": (sorted(files),),
-            }
+            },
+            "hidden": {
+                "user_hash": "USER_HASH"
+            },
         }
 
     RETURN_TYPES = ("CAMERACTRL_POSES",)
     CATEGORY = "Animate Diff 🎭🅐🅓/② Gen2 nodes ②/CameraCtrl/poses"
     FUNCTION = "load_camera_poses"
 
-    def load_camera_poses(self, pose_filename: str):
-        file_path = folder_paths.get_annotated_filepath(pose_filename)
+    def load_camera_poses(self, pose_filename: str, user_hash: str):
+        file_path = folder_paths.get_annotated_filepath(pose_filename, user_hash)
         with open(file_path, 'r') as f:
             poses = f.readlines()
         # first line of file is the link to source, so can be skipped,

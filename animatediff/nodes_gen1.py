@@ -2,6 +2,7 @@ from pathlib import Path
 import torch
 
 import comfy.sample as comfy_sample
+import execution_context
 from comfy.model_patcher import ModelPatcher
 
 from .ad_settings import AdjustGroup, AnimateDiffSettings, AdjustPE, AdjustWeight
@@ -20,11 +21,11 @@ from .sampling import motion_sample_factory
 
 class AnimateDiffLoaderGen1:
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
                 "model": ("MODEL",),
-                "model_name": (get_available_motion_models(),),
+                "model_name": (get_available_motion_models(context),),
                 "beta_schedule": (BetaSchedules.ALIAS_LIST, {"default": BetaSchedules.AUTOSELECT}),
                 #"apply_mm_groupnorm_hack": ("BOOLEAN", {"default": True}),
             },
@@ -37,7 +38,10 @@ class AnimateDiffLoaderGen1:
                 "scale_multival": ("MULTIVAL",),
                 "effect_multival": ("MULTIVAL",),
                 "per_block": ("PER_BLOCK",),
-            }
+            },
+            "hidden": {
+                "context": "EXECUTION_CONTEXT"
+            },
         }
 
     RETURN_TYPES = ("MODEL",)
@@ -50,15 +54,16 @@ class AnimateDiffLoaderGen1:
         context_options: ContextOptionsGroup=None, motion_lora: MotionLoraList=None, ad_settings: AnimateDiffSettings=None,
         sample_settings: SampleSettings=None, scale_multival=None, effect_multival=None, ad_keyframes: ADKeyframeGroup=None,
         per_block: AllPerBlocks=None,
+        context: execution_context.ExecutionContext = None,
     ):
         # load motion module and motion settings, if included
-        motion_model = load_motion_module_gen2(model_name=model_name, motion_model_settings=ad_settings)
+        motion_model = load_motion_module_gen2(context=context, model_name=model_name, motion_model_settings=ad_settings)
         # confirm that it is compatible with SD model
         validate_model_compatibility_gen2(model=model, motion_model=motion_model)
         # apply motion model to loaded_mm
         if motion_lora is not None:
             for lora in motion_lora.loras:
-                load_motion_lora_as_patches(motion_model, lora)
+                load_motion_lora_as_patches(context, motion_model, lora)
         motion_model.scale_multival = scale_multival
         motion_model.effect_multival = effect_multival
         if per_block is not None:
@@ -110,11 +115,11 @@ class AnimateDiffLoaderGen1:
 
 class LegacyAnimateDiffLoaderWithContext:
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
                 "model": ("MODEL",),
-                "model_name": (get_available_motion_models(),),
+                "model_name": (get_available_motion_models(context),),
                 "beta_schedule": (BetaSchedules.ALIAS_LIST, {"default": BetaSchedules.AUTOSELECT}),
                 #"apply_mm_groupnorm_hack": ("BOOLEAN", {"default": True}),
             },
@@ -126,7 +131,10 @@ class LegacyAnimateDiffLoaderWithContext:
                 "motion_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "step": 0.001}),
                 "apply_v2_models_properly": ("BOOLEAN", {"default": True}),
                 "ad_keyframes": ("AD_KEYFRAMES",),
-            }
+            },
+            "hidden": {
+                "context": "EXECUTION_CONTEXT"
+            },
         }
     
     RETURN_TYPES = ("MODEL",)
@@ -139,11 +147,12 @@ class LegacyAnimateDiffLoaderWithContext:
         model_name: str, beta_schedule: str,# apply_mm_groupnorm_hack: bool,
         context_options: ContextOptionsGroup=None, motion_lora: MotionLoraList=None, ad_settings: AnimateDiffSettings=None, motion_model_settings: AnimateDiffSettings=None,
         sample_settings: SampleSettings=None, motion_scale: float=1.0, apply_v2_models_properly: bool=False, ad_keyframes: ADKeyframeGroup=None,
+        context: execution_context.ExecutionContext = None,
     ):
         if ad_settings is not None:
             motion_model_settings = ad_settings
         # load motion module
-        motion_model = load_motion_module_gen1(model_name, model, motion_lora=motion_lora, motion_model_settings=motion_model_settings)
+        motion_model = load_motion_module_gen1(context, model_name, model, motion_lora=motion_lora, motion_model_settings=motion_model_settings)
         # set injection params
         params = InjectionParams(
                 unlimited_area_hack=False,

@@ -9,6 +9,7 @@ import torch
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 
+import execution_context
 import folder_paths
 from comfy.model_patcher import ModelPatcher
 
@@ -21,16 +22,19 @@ from .model_injection import ModelPatcherAndInjector, InjectionParams, MotionMod
 
 class AnimateDiffLoader_Deprecated:
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
                 "model": ("MODEL",),
                 "latents": ("LATENT",),
-                "model_name": (get_available_motion_models(),),
+                "model_name": (get_available_motion_models(context),),
                 "unlimited_area_hack": ("BOOLEAN", {"default": False},),
                 "beta_schedule": (BetaSchedules.get_alias_list_with_first_element(BetaSchedules.SQRT_LINEAR),),
             },
             "optional": {"deprecation_warning": ("ADEWARN", {"text": "Deprecated"})},
+            "hidden": {
+                "context": "EXECUTION_CONTEXT"
+            },
         }
 
     RETURN_TYPES = ("MODEL", "LATENT")
@@ -42,9 +46,10 @@ class AnimateDiffLoader_Deprecated:
         model: ModelPatcher,
         latents: Dict[str, torch.Tensor],
         model_name: str, unlimited_area_hack: bool, beta_schedule: str,
+        context: execution_context.ExecutionContext,
     ):
         # load motion module
-        motion_model = load_motion_module_gen1(model_name, model)
+        motion_model = load_motion_module_gen1(context, model_name, model)
         # get total frames
         init_frames_len = len(latents["samples"])  # deprecated - no longer used for anything lol
         # set injection params
@@ -73,12 +78,12 @@ class AnimateDiffLoader_Deprecated:
 
 class AnimateDiffLoaderAdvanced_Deprecated:
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
                 "model": ("MODEL",),
                 "latents": ("LATENT",),
-                "model_name": (get_available_motion_models(),),
+                "model_name": (get_available_motion_models(context),),
                 "unlimited_area_hack": ("BOOLEAN", {"default": False},),
                 "context_length": ("INT", {"default": 16, "min": 0, "max": 1000}),
                 "context_stride": ("INT", {"default": 1, "min": 1, "max": 1000}),
@@ -88,6 +93,9 @@ class AnimateDiffLoaderAdvanced_Deprecated:
                 "beta_schedule": (BetaSchedules.get_alias_list_with_first_element(BetaSchedules.SQRT_LINEAR),),
             },
             "optional": {"deprecation_warning": ("ADEWARN", {"text": "Deprecated"})},
+            "hidden": {
+                "context": "EXECUTION_CONTEXT"
+            },
         }
 
     RETURN_TYPES = ("MODEL", "LATENT")
@@ -100,9 +108,10 @@ class AnimateDiffLoaderAdvanced_Deprecated:
             model_name: str, unlimited_area_hack: bool,
             context_length: int, context_stride: int, context_overlap: int, context_schedule: str, closed_loop: bool,
             beta_schedule: str,
+            context: execution_context.ExecutionContext,
         ):
         # load motion module
-        motion_model = load_motion_module_gen1(model_name, model)
+        motion_model = load_motion_module_gen1(context, model_name, model)
         # get total frames
         init_frames_len = len(latents["samples"])  # deprecated - no longer used for anything lol
         # set injection params
@@ -144,11 +153,11 @@ class AnimateDiffLoaderAdvanced_Deprecated:
 class AnimateDiffCombine_Deprecated:
     ffmpeg_warning_already_shown = False
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         ffmpeg_path = shutil.which("ffmpeg")
         #Hide ffmpeg formats if ffmpeg isn't available
         if ffmpeg_path is not None:
-            ffmpeg_formats = ["video/"+x[:-5] for x in folder_paths.get_filename_list(Folders.VIDEO_FORMATS)]
+            ffmpeg_formats = ["video/"+x[:-5] for x in folder_paths.get_filename_list(context, Folders.VIDEO_FORMATS)]
         else:
             ffmpeg_formats = []
             if not s.ffmpeg_warning_already_shown:
@@ -172,6 +181,7 @@ class AnimateDiffCombine_Deprecated:
             "hidden": {
                 "prompt": "PROMPT",
                 "extra_pnginfo": "EXTRA_PNGINFO",
+                "context": "EXECUTION_CONTEXT",
             },
         }
 
@@ -191,6 +201,7 @@ class AnimateDiffCombine_Deprecated:
         save_image=True,
         prompt=None,
         extra_pnginfo=None,
+        context: execution_context.ExecutionContext = None,
     ):
         logger.warning("Do not use AnimateDiff Combine node, it is deprecated. Use Video Combine node from ComfyUI-VideoHelperSuite instead. Video nodes from VideoHelperSuite are actively maintained, more feature-rich, and also automatically attempts to get ffmpeg.")
         # convert images to numpy
@@ -202,9 +213,9 @@ class AnimateDiffCombine_Deprecated:
             
         # get output information
         output_dir = (
-            folder_paths.get_output_directory()
+            folder_paths.get_output_directory(context.user_hash)
             if save_image
-            else folder_paths.get_temp_directory()
+            else folder_paths.get_temp_directory(context.user_hash)
         )
         (
             full_output_folder,
@@ -253,7 +264,7 @@ class AnimateDiffCombine_Deprecated:
                 #Should never be reachable
                 raise ProcessLookupError("Could not find ffmpeg")
 
-            video_format_path = folder_paths.get_full_path("video_formats", format_ext + ".json")
+            video_format_path = folder_paths.get_full_path(context, "video_formats", format_ext + ".json")
             with open(video_format_path, 'r') as stream:
                 video_format = json.load(stream)
             file = f"{filename}_{counter:05}_.{video_format['extension']}"

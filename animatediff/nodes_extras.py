@@ -3,6 +3,7 @@ from typing import Union
 import torch
 from torch import Tensor
 
+import execution_context
 import folder_paths
 import nodes as comfy_nodes
 from comfy.model_patcher import ModelPatcher
@@ -38,24 +39,27 @@ class AnimateDiffUnload:
 
 class CheckpointLoaderSimpleWithNoiseSelect:
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
-                "ckpt_name": (folder_paths.get_filename_list("checkpoints"), ),
+                "ckpt_name": (folder_paths.get_filename_list(context, "checkpoints"), ),
                 "beta_schedule": (BetaSchedules.ALIAS_LIST, {"default": BetaSchedules.USE_EXISTING}, )
             },
             "optional": {
                 "use_custom_scale_factor": ("BOOLEAN", {"default": False}),
                 "scale_factor": ("FLOAT", {"default": 0.18215, "min": 0.0, "max": 1.0, "step": 0.00001})
-            }
+            },
+            "hidden": {
+                "context": "EXECUTION_CONTEXT"
+            },
         }
     RETURN_TYPES = ("MODEL", "CLIP", "VAE")
     FUNCTION = "load_checkpoint"
 
     CATEGORY = "Animate Diff 🎭🅐🅓/extras"
 
-    def load_checkpoint(self, ckpt_name, beta_schedule, output_vae=True, output_clip=True, use_custom_scale_factor=False, scale_factor=0.18215):
-        ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
+    def load_checkpoint(self, ckpt_name, beta_schedule, output_vae=True, output_clip=True, use_custom_scale_factor=False, scale_factor=0.18215, context: execution_context.ExecutionContext = None):
+        ckpt_path = folder_paths.get_full_path(context, "checkpoints", ckpt_name)
         out = load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=True, embedding_directory=folder_paths.get_folder_paths("embeddings"))
         # register chosen beta schedule on model - convert to beta_schedule name recognized by ComfyUI
         new_model_sampling = BetaSchedules.to_model_sampling(beta_schedule, out[0])

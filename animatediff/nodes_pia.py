@@ -3,6 +3,7 @@ import torch
 from torch import Tensor
 import math
 
+import execution_context
 from comfy.sd import VAE
 
 from .ad_settings import AnimateDiffSettings
@@ -159,10 +160,10 @@ class ApplyAnimateDiffPIAModel:
 
 class LoadAnimateDiffAndInjectPIANode:
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
-                "model_name": (get_available_motion_models(),),
+                "model_name": (get_available_motion_models(context),),
                 "motion_model": ("MOTION_MODEL_ADE",),
             },
             "optional": {

@@ -1,6 +1,7 @@
 from typing import Union
 import torch
 
+import execution_context
 from comfy.model_patcher import ModelPatcher
 
 from .ad_settings import AnimateDiffSettings
@@ -97,7 +98,10 @@ class ApplyAnimateDiffModelNode:
                 "prev_m_models": ("M_MODELS",),
                 "per_block": ("PER_BLOCK",),
                 "autosize": ("ADEAUTOSIZE", {"padding": 0}),
-            }
+            },
+            "hidden": {
+                "context": "EXECUTION_CONTEXT"
+            },
         }
     
     RETURN_TYPES = ("M_MODELS",)
@@ -107,7 +111,8 @@ class ApplyAnimateDiffModelNode:
     def apply_motion_model(self, motion_model: MotionModelPatcher, start_percent: float=0.0, end_percent: float=1.0,
                            motion_lora: MotionLoraList=None, ad_keyframes: ADKeyframeGroup=None,
                            scale_multival=None, effect_multival=None, per_block: AllPerBlocks=None,
-                           prev_m_models: MotionModelGroup=None,):
+                           prev_m_models: MotionModelGroup=None,
+                           context: execution_context.ExecutionContext = None):
         # set up motion models list
         if prev_m_models is None:
             prev_m_models = MotionModelGroup()
@@ -121,7 +126,7 @@ class ApplyAnimateDiffModelNode:
         # apply motion model to loaded_mm
         if motion_lora is not None:
             for lora in motion_lora.loras:
-                load_motion_lora_as_patches(motion_model, lora)
+                load_motion_lora_as_patches(context, motion_model, lora)
         motion_model.scale_multival = scale_multival
         motion_model.effect_multival = effect_multival
         if per_block is not None:
@@ -167,14 +172,17 @@ class ApplyAnimateDiffModelBasicNode:
 
 class LoadAnimateDiffModelNode:
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
-                "model_name": (get_available_motion_models(),),
+                "model_name": (get_available_motion_models(context),),
             },
             "optional": {
                 "ad_settings": ("AD_SETTINGS",),
-            }
+            },
+            "hidden": {
+                "context": "EXECUTION_CONTEXT"
+            },
         }
 
     RETURN_TYPES = ("MOTION_MODEL_ADE",)
@@ -182,9 +190,9 @@ class LoadAnimateDiffModelNode:
     CATEGORY = "Animate Diff 🎭🅐🅓/② Gen2 nodes ②"
     FUNCTION = "load_motion_model"
 
-    def load_motion_model(self, model_name: str, ad_settings: AnimateDiffSettings=None):
+    def load_motion_model(self, model_name: str, ad_settings: AnimateDiffSettings=None, context: execution_context.ExecutionContext = None):
         # load motion module and motion settings, if included
-        motion_model = load_motion_module_gen2(model_name=model_name, motion_model_settings=ad_settings)
+        motion_model = load_motion_module_gen2(context=context, model_name=model_name, motion_model_settings=ad_settings)
         return (motion_model,)
 
 
