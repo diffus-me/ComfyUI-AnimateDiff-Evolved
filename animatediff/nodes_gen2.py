@@ -1,3 +1,4 @@
+import execution_context
 from comfy_api.latest import io
 from typing import Union
 import torch
@@ -108,6 +109,9 @@ class ApplyAnimateDiffModelNode(io.ComfyNode):
             outputs=[
                 io.Custom("M_MODELS").Output('M_MODELS'),
             ],
+            hidden=[
+                io.Hidden.exec_context,
+            ]
         )
     
 
@@ -115,7 +119,8 @@ class ApplyAnimateDiffModelNode(io.ComfyNode):
     def execute(cls, motion_model: MotionModelPatcher, start_percent: float=0.0, end_percent: float=1.0,
                            motion_lora: MotionLoraList=None, ad_keyframes: ADKeyframeGroup=None,
                            scale_multival=None, effect_multival=None, per_block: AllPerBlocks=None,
-                           prev_m_models: MotionModelGroup=None,):
+                           prev_m_models: MotionModelGroup=None,
+                           exec_context: execution_context.ExecutionContext=None):
         # set up motion models list
         if prev_m_models is None:
             prev_m_models = MotionModelGroup()
@@ -129,7 +134,7 @@ class ApplyAnimateDiffModelNode(io.ComfyNode):
         # apply motion model to loaded_mm
         if motion_lora is not None:
             for lora in motion_lora.loras:
-                load_motion_lora_as_patches(motion_model, lora)
+                load_motion_lora_as_patches(exec_context, motion_model, lora)
         attachment = get_mm_attachment(motion_model)
         attachment.scale_multival = scale_multival
         attachment.effect_multival = effect_multival
@@ -178,25 +183,28 @@ class ApplyAnimateDiffModelBasicNode(io.ComfyNode):
 
 class LoadAnimateDiffModelNode(io.ComfyNode):
     @classmethod
-    def define_schema(cls) -> io.Schema:
+    def define_schema(cls, exec_context: execution_context.ExecutionContext) -> io.Schema:
         return io.Schema(
             node_id='ADE_LoadAnimateDiffModel',
             display_name='Load AnimateDiff Model 🎭🅐🅓②',
             category='Animate Diff 🎭🅐🅓/② Gen2 nodes ②',
             inputs=[
-                io.Combo.Input('model_name', options=get_available_motion_models()),
+                io.Combo.Input('model_name', options=get_available_motion_models(exec_context)),
                 io.Custom("AD_SETTINGS").Input('ad_settings', optional=True),
             ],
             outputs=[
                 io.Custom("MOTION_MODEL_ADE").Output('MOTION_MODEL'),
             ],
+            hidden=[
+                io.Hidden.exec_context,
+            ],
         )
 
 
     @classmethod
-    def execute(cls, model_name: str, ad_settings: AnimateDiffSettings=None):
+    def execute(cls, model_name: str, ad_settings: AnimateDiffSettings=None, exec_context: execution_context.ExecutionContext=None):
         # load motion module and motion settings, if included
-        motion_model = load_motion_module_gen2(model_name=model_name, motion_model_settings=ad_settings)
+        motion_model = load_motion_module_gen2(context=exec_context, model_name=model_name, motion_model_settings=ad_settings)
         return io.NodeOutput(motion_model,)
 
 

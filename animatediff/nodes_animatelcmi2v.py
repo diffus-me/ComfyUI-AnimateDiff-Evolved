@@ -2,6 +2,7 @@ from comfy_api.latest import io
 from typing import Union
 import torch
 
+import execution_context
 from nodes import VAEEncode
 import comfy.utils
 from comfy.sd import VAE
@@ -67,26 +68,29 @@ class ApplyAnimateLCMI2VModel(io.ComfyNode):
 
 class LoadAnimateLCMI2VModelNode(io.ComfyNode):
     @classmethod
-    def define_schema(cls) -> io.Schema:
+    def define_schema(cls, exec_context: execution_context.ExecutionContext) -> io.Schema:
         return io.Schema(
             node_id='ADE_LoadAnimateLCMI2VModel',
             display_name='Load AnimateLCM-I2V Model 🎭🅐🅓②',
             category='Animate Diff 🎭🅐🅓/② Gen2 nodes ②/AnimateLCM-I2V',
             inputs=[
-                io.Combo.Input('model_name', options=get_available_motion_models()),
+                io.Combo.Input('model_name', options=get_available_motion_models(exec_context)),
                 io.Custom("AD_SETTINGS").Input('ad_settings', optional=True),
             ],
             outputs=[
                 io.Custom("MOTION_MODEL_ADE").Output('MOTION_MODEL'),
                 io.Custom("MOTION_MODEL_ADE").Output('encoder_only'),
             ],
+            hidden=[
+                io.Hidden.exec_context
+            ]
         )
     
 
     @classmethod
-    def execute(cls, model_name: str, ad_settings: AnimateDiffSettings=None):
+    def execute(cls, model_name: str, ad_settings: AnimateDiffSettings=None, exec_context: execution_context.ExecutionContext=None):
         # load motion module and motion settings, if included
-        motion_model = load_motion_module_gen2(model_name=model_name, motion_model_settings=ad_settings)
+        motion_model = load_motion_module_gen2(context=exec_context, model_name=model_name, motion_model_settings=ad_settings)
         # make sure model is an AnimateLCM-I2V model
         if motion_model.model.mm_info.mm_format != AnimateDiffFormat.ANIMATELCM:
             raise Exception(f"Motion model '{motion_model.model.mm_info.mm_name}' is not an AnimateLCM-I2V model; selected model is not AnimateLCM, and does not contain an img_encoder.")
@@ -99,18 +103,21 @@ class LoadAnimateLCMI2VModelNode(io.ComfyNode):
 
 class LoadAnimateDiffAndInjectI2VNode(io.ComfyNode):
     @classmethod
-    def define_schema(cls) -> io.Schema:
+    def define_schema(cls, exec_context: execution_context.ExecutionContext) -> io.Schema:
         return io.Schema(
             node_id='ADE_InjectI2VIntoAnimateDiffModel',
             display_name='🧪Inject I2V into AnimateDiff Model 🎭🅐🅓②',
             category='Animate Diff 🎭🅐🅓/② Gen2 nodes ②/AnimateLCM-I2V/🧪experimental',
             inputs=[
-                io.Combo.Input('model_name', options=get_available_motion_models()),
+                io.Combo.Input('model_name', options=get_available_motion_models(exec_context)),
                 io.Custom("MOTION_MODEL_ADE").Input('motion_model'),
                 io.Custom("AD_SETTINGS").Input('ad_settings', optional=True),
             ],
             outputs=[
                 io.Custom("MOTION_MODEL_ADE").Output('MOTION_MODEL'),
+            ],
+            hidden=[
+                io.Hidden.exec_context,
             ],
             is_experimental=True,
         )
@@ -118,12 +125,12 @@ class LoadAnimateDiffAndInjectI2VNode(io.ComfyNode):
 
 
     @classmethod
-    def execute(cls, model_name: str, motion_model: MotionModelPatcher, ad_settings: AnimateDiffSettings=None):
+    def execute(cls, model_name: str, motion_model: MotionModelPatcher, ad_settings: AnimateDiffSettings=None, exec_context: execution_context.ExecutionContext=None):
         # make sure model w/ encoder actually has encoder
         if motion_model.model.img_encoder is None:
             raise Exception("Passed-in motion model was expected to have an img_encoder, but did not.")
         # load motion module and motion settings, if included
-        loaded_motion_model = load_motion_module_gen2(model_name=model_name, motion_model_settings=ad_settings)
+        loaded_motion_model = load_motion_module_gen2(context=exec_context, model_name=model_name, motion_model_settings=ad_settings)
         inject_img_encoder_into_model(motion_model=loaded_motion_model, w_encoder=motion_model)
         return io.NodeOutput(loaded_motion_model,)
 

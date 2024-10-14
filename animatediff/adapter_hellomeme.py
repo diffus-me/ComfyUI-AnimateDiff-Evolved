@@ -12,6 +12,7 @@ from einops import rearrange
 import comfy.ops
 import comfy.model_management
 import comfy.patcher_extension
+import execution_context
 from comfy.patcher_extension import WrappersMP
 import comfy.utils
 from comfy.ldm.modules.diffusionmodules import openaimodel
@@ -59,8 +60,8 @@ def create_HMModelPatcher(model: HMReferenceAdapter, load_device, offload_device
     return patcher
 
 
-def load_hmreferenceadapter(model_name: str):
-    model_path = get_motion_model_path(model_name)
+def load_hmreferenceadapter(context: execution_context.ExecutionContext, model_name: str):
+    model_path = get_motion_model_path(context, model_name)
     logger.info(f"Loading HMReferenceAdapter {model_name}")
     state_dict = comfy.utils.load_torch_file(model_path, safe_load=True)
     state_dict = prepare_hmref_state_dict(state_dict=state_dict, name=model_name)

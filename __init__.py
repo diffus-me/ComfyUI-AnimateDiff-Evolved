@@ -6,8 +6,8 @@ from .animatediff.motion_module_ad import prepare_dinklink_motion_module_ad
 from .animatediff.nodes import AnimateDiffExtension
 from .animatediff.dinklink import init_dinklink
 
-if len(get_available_motion_models()) == 0:
-    logger.error(f"No motion models found. Please download one and place in: {folder_paths.get_folder_paths(Folders.ANIMATEDIFF_MODELS)}")
+# if len(get_available_motion_models(None)) == 0:
+#     logger.error(f"No motion models found. Please download one and place in: {folder_paths.get_folder_paths(Folders.ANIMATEDIFF_MODELS)}")
 
 WEB_DIRECTORY = "./web"
 

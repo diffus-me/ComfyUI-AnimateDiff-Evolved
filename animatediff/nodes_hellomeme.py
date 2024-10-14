@@ -2,6 +2,7 @@ from typing import Union
 import torch
 from torch import Tensor
 
+import execution_context
 from comfy.sd import VAE
 from comfy.model_patcher import ModelPatcher
 import comfy.model_management
@@ -20,13 +21,16 @@ class TestHMRefNetInjection:
     NodeName = "Test HMRefNetInjection"
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
                 "model": ("MODEL",),
                 "image": ("IMAGE",),
                 "vae": ("VAE",),
-                "hmref": (get_available_motion_models(),),
+                "hmref": (get_available_motion_models(context),),
+            },
+            "hidden": {
+                "context": "EXECUTION_CONTEXT",
             }
         }
     
@@ -35,10 +39,10 @@ class TestHMRefNetInjection:
     FUNCTION = "inject_hmref"
 
     def inject_hmref(self, model: ModelPatcher, image: Tensor, vae: VAE, 
-                     hmref: str):
+                     hmref: str, context: execution_context.ExecutionContext):
         model = model.clone()
 
-        mp_hmref: HMModelPatcher = load_hmreferenceadapter(hmref)
+        mp_hmref: HMModelPatcher = load_hmreferenceadapter(context, hmref)
         model.set_additional_models(HMRefConst.HMREF, [mp_hmref])
         model.set_model_forward_timestep_embed_patch(create_HM_forward_timestep_embed_patch())
         model.set_injections(HMRefConst.HMREF, [mp_hmref.model.create_injector()])

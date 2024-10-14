@@ -3,6 +3,7 @@ from __future__ import annotations
 from torch import nn, Tensor
 import torch
 
+import execution_context
 from comfy.model_patcher import ModelPatcher
 import comfy.model_management
 import comfy.ops
@@ -16,9 +17,9 @@ from .utils_model import get_motion_model_path
 
 
 # cmcm (Camera Control)
-def inject_motionctrl_cmcm(motion_model: AnimateDiffModel, cmcm_name: str, ad_settings: AnimateDiffSettings=None,
+def inject_motionctrl_cmcm(context: execution_context.ExecutionContext, motion_model: AnimateDiffModel, cmcm_name: str, ad_settings: AnimateDiffSettings=None,
                            apply_non_ccs=True):
-    cmcm_path = get_motion_model_path(cmcm_name)
+    cmcm_path = get_motion_model_path(context, cmcm_name)
     state_dict = comfy.utils.load_torch_file(cmcm_path, safe_load=True)
     _remove_module_prefix(state_dict)
     # if applicable, apply ad_settings to cmcm to match expected behavior
@@ -49,8 +50,8 @@ def inject_motionctrl_cmcm(motion_model: AnimateDiffModel, cmcm_name: str, ad_se
 
 
 # omcm (Object Control)
-def load_motionctrl_omcm(omcm_name: str):
-    omcm_path = get_motion_model_path(omcm_name)
+def load_motionctrl_omcm(context: execution_context.ExecutionContext, omcm_name: str):
+    omcm_path = get_motion_model_path(context, omcm_name)
     state_dict = comfy.utils.load_torch_file(omcm_path, safe_load=True)
     _remove_module_prefix(state_dict)
     

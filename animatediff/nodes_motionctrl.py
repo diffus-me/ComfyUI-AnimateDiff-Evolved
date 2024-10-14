@@ -4,6 +4,7 @@ import numpy as np
 import os
 import json
 
+import execution_context
 import folder_paths
 
 from .ad_settings import AnimateDiffSettings
@@ -22,15 +23,18 @@ class LoadMotionCtrlCMCM:
     NodeID = "ADE_LoadMotionCtrl_CMCMMOdel"
     NodeName = "Load AnimateDiff+MotionCtrl Camera Model 🎭🅐🅓②"
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
-                "model_name": (get_available_motion_models(),),
-                "motionctrl_cmcm": (get_available_motion_models(),),
+                "model_name": (get_available_motion_models(context),),
+                "motionctrl_cmcm": (get_available_motion_models(context),),
             },
             "optional": {
                 "override_ad_weights": ("BOOLEAN", {"default": True}),
                 "ad_settings": ("AD_SETTINGS",),
+            },
+            "hidden": {
+                "context": "EXECUTION_CONTEXT",
             }
         }
     
@@ -40,9 +44,10 @@ class LoadMotionCtrlCMCM:
     FUNCTION = "load_motionctrl_cmcm"
 
     def load_motionctrl_cmcm(self, model_name: str, motionctrl_cmcm: str,
-                             override_ad_weights=True, ad_settings: AnimateDiffSettings=None,):
-        motion_model = load_motion_module_gen2(model_name=model_name, motion_model_settings=ad_settings)
-        inject_motionctrl_cmcm(motion_model.model, cmcm_name=motionctrl_cmcm, apply_non_ccs=override_ad_weights)
+                             override_ad_weights=True, ad_settings: AnimateDiffSettings=None,
+                             context: execution_context.ExecutionContext=None):
+        motion_model = load_motion_module_gen2(context=context, model_name=model_name, motion_model_settings=ad_settings)
+        inject_motionctrl_cmcm(context, motion_model.model, cmcm_name=motionctrl_cmcm, apply_non_ccs=override_ad_weights)
         return (motion_model,)
 
 
@@ -50,10 +55,13 @@ class LoadMotionCtrlOMCM:
     NodeID = "ADE_LoadMotionCtrl_OMCMMOdel"
     NodeName = "Load MotionCtrl Object Model 🎭🅐🅓②"
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
         return {
             "required": {
-                "motionctrl_omcm": (get_available_motion_models(),),
+                "motionctrl_omcm": (get_available_motion_models(context),),
+            },
+            "hidden": {
+                "context": "EXECUTION_CONTEXT",
             }
         }
     
@@ -61,8 +69,8 @@ class LoadMotionCtrlOMCM:
     CATEGORY = "Animate Diff 🎭🅐🅓/② Gen2 nodes ②/MotionCtrl"
     FUNCTION = "load_motionctrl_omcm"
 
-    def load_motionctrl_omcm(self, motionctrl_omcm: str):
-        omcm_modelpatcher = load_motionctrl_omcm(motionctrl_omcm)
+    def load_motionctrl_omcm(self, motionctrl_omcm: str, context: execution_context.ExecutionContext):
+        omcm_modelpatcher = load_motionctrl_omcm(context, motionctrl_omcm)
         return (omcm_modelpatcher,)
 
 
@@ -70,13 +78,16 @@ class LoadMotionCtrlCameraPosesFromFile:
     NodeID = "ADE_LoadMotionCtrlCameraPosesFromFile"
     NodeName = "Load MotionCtrl Camera Poses 🎭🅐🅓"
     @classmethod
-    def INPUT_TYPES(s):
-        input_dir = folder_paths.get_input_directory()
+    def INPUT_TYPES(s, context: execution_context.ExecutionContext):
+        input_dir = folder_paths.get_input_directory(user_hash=context.user_hash)
         files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
         files = [f for f in files if f.endswith(".json")]
         return {
             "required": {
                 "pose_filename": (sorted(files),),
+            },
+            "hidden": {
+                "context": "EXECUTION_CONTEXT",
             }
         }
     
@@ -84,8 +95,8 @@ class LoadMotionCtrlCameraPosesFromFile:
     CATEGORY = "Animate Diff 🎭🅐🅓/② Gen2 nodes ②/MotionCtrl"
     FUNCTION = "load_camera_poses"
 
-    def load_camera_poses(self, pose_filename):
-        file_path = folder_paths.get_annotated_filepath(pose_filename)
+    def load_camera_poses(self, pose_filename, context: execution_context.ExecutionContext):
+        file_path = folder_paths.get_annotated_filepath(pose_filename, user_hash=context.user_hash)
         with open(file_path, 'r') as f:
             RT = json.load(f)
         RT = np.array(RT)

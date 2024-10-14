@@ -1,3 +1,4 @@
+import execution_context
 from comfy_api.latest import io
 from comfy.model_patcher import ModelPatcher
 
@@ -16,14 +17,14 @@ from .sampling import outer_sample_wrapper, sliding_calc_cond_batch
 
 class AnimateDiffLoaderGen1(io.ComfyNode):
     @classmethod
-    def define_schema(cls) -> io.Schema:
+    def define_schema(cls, exec_context: execution_context.ExecutionContext) -> io.Schema:
         return io.Schema(
             node_id='ADE_AnimateDiffLoaderGen1',
             display_name='AnimateDiff Loader 🎭🅐🅓①',
             category='Animate Diff 🎭🅐🅓/① Gen1 nodes ①',
             inputs=[
                 io.Model.Input('model'),
-                io.Combo.Input('model_name', options=get_available_motion_models()),
+                io.Combo.Input('model_name', options=get_available_motion_models(exec_context)),
                 io.Combo.Input('beta_schedule', options=['autoselect', 'use existing', 'sqrt_linear (AnimateDiff)', 'linear (AnimateDiff-SDXL)', 'linear (HotshotXL/default)', 'avg(sqrt_linear,linear)', 'lcm avg(sqrt_linear,linear)', 'lcm', 'lcm[100_ots]', 'lcm >> sqrt_linear', 'sqrt', 'cosine', 'squaredcos_cap_v2'], default='autoselect'),
                 io.Custom("CONTEXT_OPTIONS").Input('context_options', optional=True),
                 io.Custom("MOTION_LORA").Input('motion_lora', optional=True),
@@ -37,6 +38,9 @@ class AnimateDiffLoaderGen1(io.ComfyNode):
             outputs=[
                 io.Model.Output('MODEL'),
             ],
+            hidden=[
+                io.Hidden.exec_context
+            ]
         )
 
 
@@ -47,15 +51,16 @@ class AnimateDiffLoaderGen1(io.ComfyNode):
         context_options: ContextOptionsGroup=None, motion_lora: MotionLoraList=None, ad_settings: AnimateDiffSettings=None,
         sample_settings: SampleSettings=None, scale_multival=None, effect_multival=None, ad_keyframes: ADKeyframeGroup=None,
         per_block: AllPerBlocks=None,
+        exec_context: execution_context.ExecutionContext=None,
     ):
         # load motion module and motion settings, if included
-        motion_model = load_motion_module_gen2(model_name=model_name, motion_model_settings=ad_settings)
+        motion_model = load_motion_module_gen2(exec_context, model_name=model_name, motion_model_settings=ad_settings)
         # confirm that it is compatible with SD model
         validate_model_compatibility_gen2(model=model, motion_model=motion_model)
         # apply motion model to loaded_mm
         if motion_lora is not None:
             for lora in motion_lora.loras:
-                load_motion_lora_as_patches(motion_model, lora)
+                load_motion_lora_as_patches(exec_context, motion_model, lora)
         attachment = get_mm_attachment(motion_model)
         attachment.scale_multival = scale_multival
         attachment.effect_multival = effect_multival

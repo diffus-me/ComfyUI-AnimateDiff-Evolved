@@ -1,3 +1,4 @@
+import execution_context
 from comfy_api.latest import io
 import json
 import os
@@ -23,12 +24,19 @@ from .sample_settings import SampleSettings
 class AnimateDiffLoaderDEPR(io.ComfyNode):
 
     @classmethod
-    def define_schema(cls):
-        return io.Schema(node_id='AnimateDiffLoaderV1', display_name='🚫AnimateDiff Loader [DEPRECATED] 🎭🅐🅓', category='', inputs=[io.Model.Input('model'), io.Custom('LATENT').Input('latents'), io.Combo.Input('model_name', options=get_available_motion_models()), io.Boolean.Input('unlimited_area_hack', default=False), io.Combo.Input('beta_schedule', options=['sqrt_linear (AnimateDiff)', 'use existing', 'autoselect', 'linear (AnimateDiff-SDXL)', 'linear (HotshotXL/default)', 'avg(sqrt_linear,linear)', 'lcm avg(sqrt_linear,linear)', 'lcm', 'lcm[100_ots]', 'lcm >> sqrt_linear', 'sqrt', 'cosine', 'squaredcos_cap_v2'])], outputs=[io.Model.Output('MODEL'), io.Custom('LATENT').Output('LATENT')], is_deprecated=True)
+    def define_schema(cls, exec_context: execution_context.ExecutionContext):
+        return io.Schema(
+            node_id='AnimateDiffLoaderV1',
+            display_name='🚫AnimateDiff Loader [DEPRECATED] 🎭🅐🅓',
+            category='',
+            inputs=[io.Model.Input('model'), io.Custom('LATENT').Input('latents'), io.Combo.Input('model_name', options=get_available_motion_models(exec_context)), io.Boolean.Input('unlimited_area_hack', default=False), io.Combo.Input('beta_schedule', options=['sqrt_linear (AnimateDiff)', 'use existing', 'autoselect', 'linear (AnimateDiff-SDXL)', 'linear (HotshotXL/default)', 'avg(sqrt_linear,linear)', 'lcm avg(sqrt_linear,linear)', 'lcm', 'lcm[100_ots]', 'lcm >> sqrt_linear', 'sqrt', 'cosine', 'squaredcos_cap_v2'])],
+            outputs=[io.Model.Output('MODEL'), io.Custom('LATENT').Output('LATENT')],
+            hidden=[io.Hidden.exec_context],
+            is_deprecated=True)
 
     @classmethod
-    def execute(cls, model: ModelPatcher, latents: Dict[str, torch.Tensor], model_name: str, unlimited_area_hack: bool, beta_schedule: str):
-        motion_model = load_motion_module_gen1(model_name, model)
+    def execute(cls, model: ModelPatcher, latents: Dict[str, torch.Tensor], model_name: str, unlimited_area_hack: bool, beta_schedule: str, exec_context: execution_context.ExecutionContext):
+        motion_model = load_motion_module_gen1(exec_context, model_name, model)
         init_frames_len = len(latents['samples'])
         params = InjectionParams(unlimited_area_hack=unlimited_area_hack, apply_v2_properly=False)
         model = model.clone()
@@ -45,12 +53,13 @@ class AnimateDiffLoaderDEPR(io.ComfyNode):
 class AnimateDiffLoaderAdvancedDEPR(io.ComfyNode):
 
     @classmethod
-    def define_schema(cls):
-        return io.Schema(node_id='ADE_AnimateDiffLoaderV1Advanced', display_name='🚫AnimateDiff Loader (Advanced) [DEPRECATED] 🎭🅐🅓', category='', inputs=[io.Model.Input('model'), io.Custom('LATENT').Input('latents'), io.Combo.Input('model_name', options=get_available_motion_models()), io.Boolean.Input('unlimited_area_hack', default=False), io.Int.Input('context_length', default=16, max=1000, min=0), io.Int.Input('context_stride', default=1, max=1000, min=1), io.Int.Input('context_overlap', default=4, max=1000, min=0), io.Combo.Input('context_schedule', options=['uniform']), io.Boolean.Input('closed_loop', default=False), io.Combo.Input('beta_schedule', options=['sqrt_linear (AnimateDiff)', 'use existing', 'autoselect', 'linear (AnimateDiff-SDXL)', 'linear (HotshotXL/default)', 'avg(sqrt_linear,linear)', 'lcm avg(sqrt_linear,linear)', 'lcm', 'lcm[100_ots]', 'lcm >> sqrt_linear', 'sqrt', 'cosine', 'squaredcos_cap_v2'])], outputs=[io.Model.Output('MODEL'), io.Custom('LATENT').Output('LATENT')], is_deprecated=True)
+    def define_schema(cls, exec_context: execution_context.ExecutionContext):
+        return io.Schema(node_id='ADE_AnimateDiffLoaderV1Advanced', display_name='🚫AnimateDiff Loader (Advanced) [DEPRECATED] 🎭🅐🅓', category='', inputs=[io.Model.Input('model'), io.Custom('LATENT').Input('latents'), io.Combo.Input('model_name', options=get_available_motion_models(exec_context)), io.Boolean.Input('unlimited_area_hack', default=False), io.Int.Input('context_length', default=16, max=1000, min=0), io.Int.Input('context_stride', default=1, max=1000, min=1), io.Int.Input('context_overlap', default=4, max=1000, min=0), io.Combo.Input('context_schedule', options=['uniform']), io.Boolean.Input('closed_loop', default=False), io.Combo.Input('beta_schedule', options=['sqrt_linear (AnimateDiff)', 'use existing', 'autoselect', 'linear (AnimateDiff-SDXL)', 'linear (HotshotXL/default)', 'avg(sqrt_linear,linear)', 'lcm avg(sqrt_linear,linear)', 'lcm', 'lcm[100_ots]', 'lcm >> sqrt_linear', 'sqrt', 'cosine', 'squaredcos_cap_v2'])], outputs=[io.Model.Output('MODEL'), io.Custom('LATENT').Output('LATENT')], is_deprecated=True,
+                         hidden=[io.Hidden.exec_context])
 
     @classmethod
-    def execute(cls, model: ModelPatcher, latents: Dict[str, torch.Tensor], model_name: str, unlimited_area_hack: bool, context_length: int, context_stride: int, context_overlap: int, context_schedule: str, closed_loop: bool, beta_schedule: str):
-        motion_model = load_motion_module_gen1(model_name, model)
+    def execute(cls, model: ModelPatcher, latents: Dict[str, torch.Tensor], model_name: str, unlimited_area_hack: bool, context_length: int, context_stride: int, context_overlap: int, context_schedule: str, closed_loop: bool, beta_schedule: str, exec_context: execution_context.ExecutionContext):
+        motion_model = load_motion_module_gen1(exec_context, model_name, model)
         init_frames_len = len(latents['samples'])
         params = InjectionParams(unlimited_area_hack=unlimited_area_hack, apply_v2_properly=False)
         context_group = ContextOptionsGroup()
@@ -70,14 +79,15 @@ class AnimateDiffLoaderAdvancedDEPR(io.ComfyNode):
 class LegacyAnimateDiffLoaderWithContextDEPR(io.ComfyNode):
 
     @classmethod
-    def define_schema(cls):
-        return io.Schema(node_id='ADE_AnimateDiffLoaderWithContext', display_name='AnimateDiff Loader [Legacy] 🎭🅐🅓①', category='Animate Diff 🎭🅐🅓/① Gen1 nodes ①', inputs=[io.Model.Input('model'), io.Combo.Input('model_name', options=get_available_motion_models()), io.Combo.Input('beta_schedule', options=['autoselect', 'use existing', 'sqrt_linear (AnimateDiff)', 'linear (AnimateDiff-SDXL)', 'linear (HotshotXL/default)', 'avg(sqrt_linear,linear)', 'lcm avg(sqrt_linear,linear)', 'lcm', 'lcm[100_ots]', 'lcm >> sqrt_linear', 'sqrt', 'cosine', 'squaredcos_cap_v2'], default='autoselect'), io.Custom('CONTEXT_OPTIONS').Input('context_options', optional=True), io.Custom('MOTION_LORA').Input('motion_lora', optional=True), io.Custom('AD_SETTINGS').Input('ad_settings', optional=True), io.Custom('SAMPLE_SETTINGS').Input('sample_settings', optional=True), io.Float.Input('motion_scale', optional=True, default=1.0, min=0.0, step=0.001), io.Boolean.Input('apply_v2_models_properly', optional=True, default=True), io.Custom('AD_KEYFRAMES').Input('ad_keyframes', optional=True)], outputs=[io.Model.Output('MODEL')], is_deprecated=True)
+    def define_schema(cls, exec_context: execution_context.ExecutionContext):
+        return io.Schema(node_id='ADE_AnimateDiffLoaderWithContext', display_name='AnimateDiff Loader [Legacy] 🎭🅐🅓①', category='Animate Diff 🎭🅐🅓/① Gen1 nodes ①', inputs=[io.Model.Input('model'), io.Combo.Input('model_name', options=get_available_motion_models(exec_context)), io.Combo.Input('beta_schedule', options=['autoselect', 'use existing', 'sqrt_linear (AnimateDiff)', 'linear (AnimateDiff-SDXL)', 'linear (HotshotXL/default)', 'avg(sqrt_linear,linear)', 'lcm avg(sqrt_linear,linear)', 'lcm', 'lcm[100_ots]', 'lcm >> sqrt_linear', 'sqrt', 'cosine', 'squaredcos_cap_v2'], default='autoselect'), io.Custom('CONTEXT_OPTIONS').Input('context_options', optional=True), io.Custom('MOTION_LORA').Input('motion_lora', optional=True), io.Custom('AD_SETTINGS').Input('ad_settings', optional=True), io.Custom('SAMPLE_SETTINGS').Input('sample_settings', optional=True), io.Float.Input('motion_scale', optional=True, default=1.0, min=0.0, step=0.001), io.Boolean.Input('apply_v2_models_properly', optional=True, default=True), io.Custom('AD_KEYFRAMES').Input('ad_keyframes', optional=True)], outputs=[io.Model.Output('MODEL')], is_deprecated=True,
+                         hidden=[io.Hidden.exec_context])
 
     @classmethod
-    def execute(cls, model: ModelPatcher, model_name: str, beta_schedule: str, context_options: ContextOptionsGroup=None, motion_lora: MotionLoraList=None, ad_settings: AnimateDiffSettings=None, motion_model_settings: AnimateDiffSettings=None, sample_settings: SampleSettings=None, motion_scale: float=1.0, apply_v2_models_properly: bool=False, ad_keyframes: ADKeyframeGroup=None):
+    def execute(cls, model: ModelPatcher, model_name: str, beta_schedule: str, context_options: ContextOptionsGroup=None, motion_lora: MotionLoraList=None, ad_settings: AnimateDiffSettings=None, motion_model_settings: AnimateDiffSettings=None, sample_settings: SampleSettings=None, motion_scale: float=1.0, apply_v2_models_properly: bool=False, ad_keyframes: ADKeyframeGroup=None, exec_context: execution_context.ExecutionContext=None):
         if ad_settings is not None:
             motion_model_settings = ad_settings
-        motion_model = load_motion_module_gen1(model_name, model, motion_lora=motion_lora, motion_model_settings=motion_model_settings)
+        motion_model = load_motion_module_gen1(exec_context, model_name, model, motion_lora=motion_lora, motion_model_settings=motion_model_settings)
         params = InjectionParams(unlimited_area_hack=False, apply_v2_properly=apply_v2_models_properly)
         if context_options:
             params.set_context(context_options)
@@ -112,20 +122,20 @@ class LegacyAnimateDiffLoaderWithContextDEPR(io.ComfyNode):
 class AnimateDiffCombineDEPR(io.ComfyNode):
 
     @classmethod
-    def get_formats(cls):
+    def get_formats(cls, exec_context: execution_context.ExecutionContext):
         ffmpeg_path = shutil.which('ffmpeg')
         if ffmpeg_path is not None:
-            return ['image/gif', 'image/webp'] + ['video/' + x[:-5] for x in folder_paths.get_filename_list(Folders.VIDEO_FORMATS)]
+            return ['image/gif', 'image/webp'] + ['video/' + x[:-5] for x in folder_paths.get_filename_list(exec_context, Folders.VIDEO_FORMATS)]
         cls.ffmpeg_warning_already_shown = True
         return ['image/gif', 'image/webp']
 
     @classmethod
-    def define_schema(cls):
-        return io.Schema(node_id='ADE_AnimateDiffCombine', display_name='🚫AnimateDiff Combine [DEPRECATED, Use Video Combine (VHS) Instead!] 🎭🅐🅓', category='', inputs=[io.Image.Input('images'), io.Int.Input('frame_rate', default=8, max=24, min=1, step=1), io.Int.Input('loop_count', default=0, max=100, min=0, step=1), io.String.Input('filename_prefix', default='AnimateDiff'), io.Combo.Input('format', options=cls.get_formats()), io.Boolean.Input('pingpong', default=False), io.Boolean.Input('save_image', default=True)], outputs=[io.Custom('GIF').Output('GIF')], is_deprecated=True, is_output_node=True, hidden=[io.Hidden.prompt, io.Hidden.extra_pnginfo])
+    def define_schema(cls, exec_context: execution_context.ExecutionContext):
+        return io.Schema(node_id='ADE_AnimateDiffCombine', display_name='🚫AnimateDiff Combine [DEPRECATED, Use Video Combine (VHS) Instead!] 🎭🅐🅓', category='', inputs=[io.Image.Input('images'), io.Int.Input('frame_rate', default=8, max=24, min=1, step=1), io.Int.Input('loop_count', default=0, max=100, min=0, step=1), io.String.Input('filename_prefix', default='AnimateDiff'), io.Combo.Input('format', options=cls.get_formats(exec_context)), io.Boolean.Input('pingpong', default=False), io.Boolean.Input('save_image', default=True)], outputs=[io.Custom('GIF').Output('GIF')], is_deprecated=True, is_output_node=True, hidden=[io.Hidden.prompt, io.Hidden.extra_pnginfo, io.Hidden.exec_context])
     ffmpeg_warning_already_shown = False
 
     @classmethod
-    def execute(cls, images, frame_rate: int, loop_count: int, filename_prefix='AnimateDiff', format='image/gif', pingpong=False, save_image=True, prompt=None, extra_pnginfo=None):
+    def execute(cls, images, frame_rate: int, loop_count: int, filename_prefix='AnimateDiff', format='image/gif', pingpong=False, save_image=True, prompt=None, extra_pnginfo=None, exec_context: execution_context.ExecutionContext=None):
         prompt = cls.hidden.prompt
         extra_pnginfo = cls.hidden.extra_pnginfo
         logger.warning('Do not use AnimateDiff Combine node, it is deprecated. Use Video Combine node from ComfyUI-VideoHelperSuite instead. Video nodes from VideoHelperSuite are actively maintained, more feature-rich, and also automatically attempts to get ffmpeg.')
@@ -134,7 +144,7 @@ class AnimateDiffCombineDEPR(io.ComfyNode):
             img = 255.0 * image.cpu().numpy()
             img = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8))
             frames.append(img)
-        output_dir = folder_paths.get_output_directory() if save_image else folder_paths.get_temp_directory()
+        output_dir = folder_paths.get_output_directory(user_hash=exec_context.user_hash) if save_image else folder_paths.get_temp_directory(user_hash=exec_context.user_hash)
         full_output_folder, filename, counter, subfolder, _ = folder_paths.get_save_image_path(filename_prefix, output_dir)
         metadata = PngInfo()
         if prompt is not None:
@@ -156,7 +166,7 @@ class AnimateDiffCombineDEPR(io.ComfyNode):
             ffmpeg_path = shutil.which('ffmpeg')
             if ffmpeg_path is None:
                 raise ProcessLookupError('Could not find ffmpeg')
-            video_format_path = folder_paths.get_full_path('video_formats', format_ext + '.json')
+            video_format_path = folder_paths.get_full_path(exec_context, 'video_formats', format_ext + '.json')
             with open(video_format_path, 'r') as stream:
                 video_format = json.load(stream)
             file = f"{filename}_{counter:05}_.{video_format['extension']}"

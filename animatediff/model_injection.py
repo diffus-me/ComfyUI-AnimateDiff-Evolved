@@ -34,6 +34,8 @@ from .utils_model import get_motion_lora_path, get_motion_model_path, get_sd_mod
 from .sample_settings import SampleSettings, SeedNoiseGeneration
 from .dinklink import DinkLinkConst, get_dinklink, get_acn_outer_sample_wrapper
 
+import execution_context
+
 
 def prepare_dinklink_register_definitions():
     # expose create_MotionModelPatcher
@@ -774,11 +776,11 @@ def get_vanilla_model_patcher(m: ModelPatcher) -> ModelPatcher:
 # Example model keys: 
 #   down_blocks.0.motion_modules.0.temporal_transformer.transformer_blocks.0.attention_blocks.0.to_q.weight
 #
-def load_motion_lora_as_patches(motion_model: MotionModelPatcher, lora: MotionLoraInfo) -> None:
+def load_motion_lora_as_patches(context: execution_context.ExecutionContext, motion_model: MotionModelPatcher, lora: MotionLoraInfo) -> None:
     def get_version(has_midblock: bool):
         return "v2" if has_midblock else "v1"
 
-    lora_path = get_motion_lora_path(lora.name)
+    lora_path = get_motion_lora_path(context, lora.name)
     logger.info(f"Loading motion LoRA {lora.name}")
     state_dict = comfy.utils.load_torch_file(lora_path)
 
@@ -825,8 +827,8 @@ def load_motion_lora_as_patches(motion_model: MotionModelPatcher, lora: MotionLo
     motion_model.add_patches(patches=patches, strength_patch=lora.strength)
 
 
-def load_motion_module_gen1(model_name: str, model: ModelPatcher, motion_lora: MotionLoraList = None, motion_model_settings: AnimateDiffSettings = None) -> MotionModelPatcher:
-    model_path = get_motion_model_path(model_name)
+def load_motion_module_gen1(context: execution_context.ExecutionContext, model_name: str, model: ModelPatcher, motion_lora: MotionLoraList = None, motion_model_settings: AnimateDiffSettings = None) -> MotionModelPatcher:
+    model_path = get_motion_model_path(context, model_name)
     logger.info(f"Loading motion module {model_name}")
     mm_state_dict = comfy.utils.load_torch_file(model_path, safe_load=True)
     # TODO: check for empty state dict?
@@ -850,12 +852,12 @@ def load_motion_module_gen1(model_name: str, model: ModelPatcher, motion_lora: M
     # load motion_lora, if present
     if motion_lora is not None:
         for lora in motion_lora.loras:
-            load_motion_lora_as_patches(motion_model, lora)
+            load_motion_lora_as_patches(context, motion_model, lora)
     return motion_model
 
 
-def load_motion_module_gen2(model_name: str, motion_model_settings: AnimateDiffSettings = None) -> MotionModelPatcher:
-    model_path = get_motion_model_path(model_name)
+def load_motion_module_gen2(context: execution_context.ExecutionContext, model_name: str, motion_model_settings: AnimateDiffSettings = None) -> MotionModelPatcher:
+    model_path = get_motion_model_path(context, model_name)
     logger.info(f"Loading motion module {model_name} via Gen2")
     mm_state_dict = comfy.utils.load_torch_file(model_path, safe_load=True)
     # TODO: check for empty state dict?
@@ -938,8 +940,8 @@ def inject_pia_conv_in_into_model(motion_model: MotionModelPatcher, w_pia: Motio
     motion_model.model.mm_info.mm_format = AnimateDiffFormat.PIA
 
 
-def inject_camera_encoder_into_model(motion_model: MotionModelPatcher, camera_ctrl_name: str):
-    camera_ctrl_path = get_motion_model_path(camera_ctrl_name)
+def inject_camera_encoder_into_model(context: execution_context.ExecutionContext, motion_model: MotionModelPatcher, camera_ctrl_name: str):
+    camera_ctrl_path = get_motion_model_path(context, camera_ctrl_name)
     full_state_dict = comfy.utils.load_torch_file(camera_ctrl_path, safe_load=True)
     camera_state_dict: dict[str, Tensor] = dict()
     attention_state_dict: dict[str, Tensor] = dict()

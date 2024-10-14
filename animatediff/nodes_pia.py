@@ -1,3 +1,4 @@
+import execution_context
 from comfy_api.latest import io
 from typing import Union
 import torch
@@ -162,18 +163,21 @@ class ApplyAnimateDiffPIAModel(io.ComfyNode):
 
 class LoadAnimateDiffAndInjectPIANode(io.ComfyNode):
     @classmethod
-    def define_schema(cls) -> io.Schema:
+    def define_schema(cls, exec_context: execution_context.ExecutionContext) -> io.Schema:
         return io.Schema(
             node_id='ADE_InjectPIAIntoAnimateDiffModel',
             display_name='🧪Inject PIA into AnimateDiff Model 🎭🅐🅓②',
             category='Animate Diff 🎭🅐🅓/② Gen2 nodes ②/PIA/🧪experimental',
             inputs=[
-                io.Combo.Input('model_name', options=get_available_motion_models()),
+                io.Combo.Input('model_name', options=get_available_motion_models(exec_context)),
                 io.Custom("MOTION_MODEL_ADE").Input('motion_model'),
                 io.Custom("AD_SETTINGS").Input('ad_settings', optional=True),
             ],
             outputs=[
                 io.Custom("MOTION_MODEL_ADE").Output('MOTION_MODEL'),
+            ],
+            hidden=[
+                io.Hidden.exec_context,
             ],
             is_experimental=True,
         )
@@ -181,12 +185,12 @@ class LoadAnimateDiffAndInjectPIANode(io.ComfyNode):
 
     
     @classmethod
-    def execute(cls, model_name: str, motion_model: MotionModelPatcher, ad_settings: AnimateDiffSettings=None):
+    def execute(cls, model_name: str, motion_model: MotionModelPatcher, ad_settings: AnimateDiffSettings=None, exec_context: execution_context.ExecutionContext=None):
         # make sure model actually has PIA conv_in
         if motion_model.model.conv_in is None:
             raise Exception("Passed-in motion model was expected to be PIA (contain conv_in), but did not.")
         # load motion module and motion settings, if included
-        loaded_motion_model = load_motion_module_gen2(model_name=model_name, motion_model_settings=ad_settings)
+        loaded_motion_model = load_motion_module_gen2(context=exec_context, model_name=model_name, motion_model_settings=ad_settings)
         inject_pia_conv_in_into_model(motion_model=loaded_motion_model, w_pia=motion_model)
         return io.NodeOutput(loaded_motion_model,)
 

@@ -4,6 +4,8 @@ import os
 import torch
 
 import math
+
+import execution_context
 import folder_paths
 import copy
 import json
@@ -267,26 +269,29 @@ class ApplyAnimateDiffWithCameraCtrl(io.ComfyNode):
 
 class LoadAnimateDiffModelWithCameraCtrl(io.ComfyNode):
     @classmethod
-    def define_schema(cls) -> io.Schema:
+    def define_schema(cls, exec_context: execution_context.ExecutionContext) -> io.Schema:
         return io.Schema(
             node_id='ADE_LoadAnimateDiffModelWithCameraCtrl',
             display_name='Load AnimateDiff+CameraCtrl Model 🎭🅐🅓②',
             category='Animate Diff 🎭🅐🅓/② Gen2 nodes ②/CameraCtrl',
             inputs=[
-                io.Combo.Input('model_name', options=get_available_motion_models()),
-                io.Combo.Input('camera_ctrl', options=get_available_motion_models()),
+                io.Combo.Input('model_name', options=get_available_motion_models(exec_context)),
+                io.Combo.Input('camera_ctrl', options=get_available_motion_models(exec_context)),
                 io.Custom("AD_SETTINGS").Input('ad_settings', optional=True),
             ],
             outputs=[
                 io.Custom("MOTION_MODEL_ADE").Output('MOTION_MODEL'),
             ],
+            hidden=[
+                io.Hidden.exec_context,
+            ],
         )
 
 
     @classmethod
-    def execute(cls, model_name: str, camera_ctrl: str, ad_settings: AnimateDiffSettings=None):
-        loaded_motion_model = load_motion_module_gen2(model_name=model_name, motion_model_settings=ad_settings)
-        inject_camera_encoder_into_model(motion_model=loaded_motion_model, camera_ctrl_name=camera_ctrl)
+    def execute(cls, model_name: str, camera_ctrl: str, ad_settings: AnimateDiffSettings=None, exec_context: execution_context.ExecutionContext=None):
+        loaded_motion_model = load_motion_module_gen2(context=exec_context, model_name=model_name, motion_model_settings=ad_settings)
+        inject_camera_encoder_into_model(context=exec_context, motion_model=loaded_motion_model, camera_ctrl_name=camera_ctrl)
         return io.NodeOutput(loaded_motion_model,)
 
 
@@ -328,23 +333,26 @@ class CameraCtrlADKeyframeNode(io.ComfyNode):
 
 class LoadCameraPosesFromFile(io.ComfyNode):
     @classmethod
-    def define_schema(cls) -> io.Schema:
+    def define_schema(cls, exec_context: execution_context.ExecutionContext) -> io.Schema:
         return io.Schema(
             node_id='ADE_LoadCameraPoses',
             display_name='Load CameraCtrl Poses (File) 🎭🅐🅓②',
             category='Animate Diff 🎭🅐🅓/② Gen2 nodes ②/CameraCtrl/poses',
             inputs=[
-                io.Combo.Input('pose_filename', options=sorted(f for f in os.listdir(folder_paths.get_input_directory()) if os.path.isfile(os.path.join(folder_paths.get_input_directory(), f)) and f.endswith(".txt"))),
+                io.Combo.Input('pose_filename', options=sorted(f for f in os.listdir(folder_paths.get_input_directory(exec_context.user_hash)) if os.path.isfile(os.path.join(folder_paths.get_input_directory(exec_context.user_hash), f)) and f.endswith(".txt"))),
             ],
             outputs=[
                 io.Custom("CAMERACTRL_POSES").Output('CAMERACTRL_POSES'),
+            ],
+            hidden=[
+                io.Hidden.exec_context,
             ],
         )
 
 
     @classmethod
-    def execute(cls, pose_filename: str):
-        file_path = folder_paths.get_annotated_filepath(pose_filename)
+    def execute(cls, pose_filename: str, exec_context: execution_context.ExecutionContext):
+        file_path = folder_paths.get_annotated_filepath(pose_filename, user_hash=exec_context.user_hash)
         with open(file_path, 'r') as f:
             poses = f.readlines()
         # first line of file is the link to source, so can be skipped,

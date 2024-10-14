@@ -1,3 +1,4 @@
+import execution_context
 from comfy_api.latest import io
 import uuid
 import folder_paths
@@ -204,15 +205,35 @@ class MaskableLoraLoaderDEPR(io.ComfyNode):
     loaded_lora = None
 
     @classmethod
-    def define_schema(cls):
-        return io.Schema(node_id='ADE_RegisterLoraHook', display_name='Register LoRA Hook 🎭🅐🅓', category='Animate Diff 🎭🅐🅓/conditioning/register lora hooks', inputs=[io.Model.Input('model'), io.Clip.Input('clip'), io.Combo.Input('lora_name', options=folder_paths.get_filename_list('loras')), io.Float.Input('strength_model', default=1.0, max=20.0, min=-20.0, step=0.01), io.Float.Input('strength_clip', default=1.0, max=20.0, min=-20.0, step=0.01)], outputs=[io.Model.Output('MODEL'), io.Clip.Output('CLIP'), io.Custom('HOOKS').Output('HOOKS')], is_deprecated=True)
+    def define_schema(cls, exec_context: execution_context.ExecutionContext):
+        return io.Schema(
+            node_id='ADE_RegisterLoraHook',
+            display_name='Register LoRA Hook 🎭🅐🅓',
+            category='Animate Diff 🎭🅐🅓/conditioning/register lora hooks',
+            inputs=[
+                io.Model.Input('model'),
+                io.Clip.Input('clip'),
+                io.Combo.Input('lora_name', options=folder_paths.get_filename_list(exec_context, 'loras')),
+                io.Float.Input('strength_model', default=1.0, max=20.0, min=-20.0, step=0.01),
+                io.Float.Input('strength_clip', default=1.0, max=20.0, min=-20.0, step=0.01)
+            ],
+            outputs=[
+                io.Model.Output('MODEL'),
+                io.Clip.Output('CLIP'),
+                io.Custom('HOOKS').Output('HOOKS')
+            ],
+            hidden=[
+                io.Hidden.exec_context,
+            ],
+            is_deprecated=True
+        )
 
 
     @classmethod
-    def execute(cls, model: Union[ModelPatcher], clip: CLIP, lora_name: str, strength_model: float, strength_clip: float):
+    def execute(cls, model: Union[ModelPatcher], clip: CLIP, lora_name: str, strength_model: float, strength_clip: float, exec_context: execution_context.ExecutionContext):
         if strength_model == 0 and strength_clip == 0:
             return io.NodeOutput(model, clip, None)
-        lora_path = folder_paths.get_full_path('loras', lora_name)
+        lora_path = folder_paths.get_full_path(exec_context, 'loras', lora_name)
         lora = None
         if cls.loaded_lora is not None:
             if cls.loaded_lora[0] == lora_path:
@@ -230,37 +251,37 @@ class MaskableLoraLoaderDEPR(io.ComfyNode):
 class MaskableLoraLoaderModelOnlyDEPR(io.ComfyNode):
 
     @classmethod
-    def define_schema(cls):
-        return io.Schema(node_id='ADE_RegisterLoraHookModelOnly', display_name='Register LoRA Hook (Model Only) 🎭🅐🅓', category='Animate Diff 🎭🅐🅓/conditioning/register lora hooks', inputs=[io.Model.Input('model'), io.Combo.Input('lora_name', options=folder_paths.get_filename_list('loras')), io.Float.Input('strength_model', default=1.0, max=20.0, min=-20.0, step=0.01)], outputs=[io.Model.Output('MODEL'), io.Custom('HOOKS').Output('HOOKS')], is_deprecated=True)
+    def define_schema(cls, exec_context: execution_context.ExecutionContext):
+        return io.Schema(node_id='ADE_RegisterLoraHookModelOnly', display_name='Register LoRA Hook (Model Only) 🎭🅐🅓', category='Animate Diff 🎭🅐🅓/conditioning/register lora hooks', inputs=[io.Model.Input('model'), io.Combo.Input('lora_name', options=folder_paths.get_filename_list(exec_context, 'loras')), io.Float.Input('strength_model', default=1.0, max=20.0, min=-20.0, step=0.01)], outputs=[io.Model.Output('MODEL'), io.Custom('HOOKS').Output('HOOKS')], is_deprecated=True, hidden=[io.Hidden.exec_context])
 
     @classmethod
-    def execute(cls, model: ModelPatcher, lora_name: str, strength_model: float):
-        model_lora, _, hooks = MaskableLoraLoaderDEPR.execute(model=model, clip=None, lora_name=lora_name, strength_model=strength_model, strength_clip=0).args
+    def execute(cls, model: ModelPatcher, lora_name: str, strength_model: float, exec_context: execution_context.ExecutionContext):
+        model_lora, _, hooks = MaskableLoraLoaderDEPR.execute(model=model, clip=None, lora_name=lora_name, strength_model=strength_model, strength_clip=0, exec_context=exec_context).args
         return io.NodeOutput(model_lora, hooks)
 
 class MaskableSDModelLoaderDEPR(io.ComfyNode, comfy_extras.nodes_hooks.CreateHookModelAsLora):
     loaded_weights = None
 
     @classmethod
-    def define_schema(cls):
-        return io.Schema(node_id='ADE_RegisterModelAsLoraHook', display_name='Register Model as LoRA Hook 🎭🅐🅓', category='Animate Diff 🎭🅐🅓/conditioning/register lora hooks', inputs=[io.Model.Input('model'), io.Clip.Input('clip'), io.Combo.Input('ckpt_name', options=folder_paths.get_filename_list('checkpoints')), io.Float.Input('strength_model', default=1.0, max=20.0, min=-20.0, step=0.01), io.Float.Input('strength_clip', default=1.0, max=20.0, min=-20.0, step=0.01)], outputs=[io.Model.Output('MODEL'), io.Clip.Output('CLIP'), io.Custom('HOOKS').Output('HOOKS')], is_deprecated=True, is_experimental=True)
+    def define_schema(cls, exec_context: execution_context.ExecutionContext):
+        return io.Schema(node_id='ADE_RegisterModelAsLoraHook', display_name='Register Model as LoRA Hook 🎭🅐🅓', category='Animate Diff 🎭🅐🅓/conditioning/register lora hooks', inputs=[io.Model.Input('model'), io.Clip.Input('clip'), io.Combo.Input('ckpt_name', options=folder_paths.get_filename_list(exec_context, 'checkpoints')), io.Float.Input('strength_model', default=1.0, max=20.0, min=-20.0, step=0.01), io.Float.Input('strength_clip', default=1.0, max=20.0, min=-20.0, step=0.01)], outputs=[io.Model.Output('MODEL'), io.Clip.Output('CLIP'), io.Custom('HOOKS').Output('HOOKS')], is_deprecated=True, is_experimental=True)
 
     @classmethod
-    def execute(cls, model: ModelPatcher, clip: CLIP, ckpt_name: str, strength_model: float, strength_clip: float):
+    def execute(cls, model: ModelPatcher, clip: CLIP, ckpt_name: str, strength_model: float, strength_clip: float, exec_context: execution_context.ExecutionContext):
         returned = comfy_extras.nodes_hooks.CreateHookModelAsLora.create_hook(
-            cls, ckpt_name=ckpt_name, strength_model=strength_model, strength_clip=strength_clip
+            cls, ckpt_name=ckpt_name, strength_model=strength_model, strength_clip=strength_clip, context=exec_context,
         )
         return io.NodeOutput(model.clone(), clip.clone(), returned[0])
 
 class MaskableSDModelLoaderModelOnlyDEPR(io.ComfyNode):
 
     @classmethod
-    def define_schema(cls):
-        return io.Schema(node_id='ADE_RegisterModelAsLoraHookModelOnly', display_name='Register Model as LoRA Hook (MO) 🎭🅐🅓', category='Animate Diff 🎭🅐🅓/conditioning/register lora hooks', inputs=[io.Model.Input('model'), io.Combo.Input('ckpt_name', options=folder_paths.get_filename_list('checkpoints')), io.Float.Input('strength_model', default=1.0, max=20.0, min=-20.0, step=0.01)], outputs=[io.Model.Output('MODEL'), io.Custom('HOOKS').Output('HOOKS')], is_deprecated=True, is_experimental=True)
+    def define_schema(cls, exec_context: execution_context.ExecutionContext):
+        return io.Schema(node_id='ADE_RegisterModelAsLoraHookModelOnly', display_name='Register Model as LoRA Hook (MO) 🎭🅐🅓', category='Animate Diff 🎭🅐🅓/conditioning/register lora hooks', inputs=[io.Model.Input('model'), io.Combo.Input('ckpt_name', options=folder_paths.get_filename_list(exec_context, 'checkpoints')), io.Float.Input('strength_model', default=1.0, max=20.0, min=-20.0, step=0.01)], outputs=[io.Model.Output('MODEL'), io.Custom('HOOKS').Output('HOOKS')], is_deprecated=True, is_experimental=True, hidden=[io.Hidden.exec_context])
 
     @classmethod
-    def execute(cls, model: ModelPatcher, ckpt_name: str, strength_model: float):
-        model_lora, _, hooks = MaskableSDModelLoaderDEPR.execute(model=model, clip=None, ckpt_name=ckpt_name, strength_model=strength_model, strength_clip=0).args
+    def execute(cls, model: ModelPatcher, ckpt_name: str, strength_model: float, exec_context: execution_context.ExecutionContext):
+        model_lora, _, hooks = MaskableSDModelLoaderDEPR.execute(model=model, clip=None, ckpt_name=ckpt_name, strength_model=strength_model, strength_clip=0, exec_context=exec_context).args
         return io.NodeOutput(model_lora, hooks)
 
 class SetModelLoraHookDEPR(io.ComfyNode):
