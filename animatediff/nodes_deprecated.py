@@ -186,7 +186,20 @@ class AnimateDiffModelSettingsDEPR(io.ComfyNode):
 
     @classmethod
     def define_schema(cls):
-        return io.Schema(node_id='ADE_AnimateDiffModelSettings_Release', display_name='🚫[DEPR] Motion Model Settings 🎭🅐🅓①', category='', inputs=[io.Float.Input('min_motion_scale', default=1.0, min=0.0, step=0.001), io.Float.Input('max_motion_scale', default=1.0, min=0.0, step=0.001), io.Mask.Input('mask_motion_scale', optional=True)], outputs=[io.Custom('AD_SETTINGS').Output('AD_SETTINGS')], is_deprecated=True)
+        return io.Schema(
+            node_id='ADE_AnimateDiffModelSettings_Release',
+            display_name='🚫[DEPR] Motion Model Settings 🎭🅐🅓①',
+            category='',
+            inputs=[
+                io.Float.Input('min_motion_scale', default=1.0, min=0.0, step=0.001),
+                io.Float.Input('max_motion_scale', default=1.0, min=0.0, step=0.001),
+                io.Mask.Input('mask_motion_scale', optional=True)
+            ],
+            outputs=[
+                io.Custom('AD_SETTINGS').Output('AD_SETTINGS')
+            ],
+            is_deprecated=True
+        )
 
     @classmethod
     def execute(cls, mask_motion_scale: torch.Tensor=None, min_motion_scale: float=1.0, max_motion_scale: float=1.0):

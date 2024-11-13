@@ -28,8 +28,8 @@ from .nodes_cameractrl import (
     CameraCtrlReplaceCameraParameters,
     CameraCtrlSetOriginalAspectRatio,
     LoadAnimateDiffModelWithCameraCtrl,
-    LoadCameraPosesFromFile,
-    LoadCameraPosesFromPath,
+    # LoadCameraPosesFromFile,
+    # LoadCameraPosesFromPath,
 )
 from .nodes_conditioning import (
     CombineLoraHookEightOptionalDEPR,
@@ -304,8 +304,8 @@ class AnimateDiffExtension(ComfyExtension):
             ApplyAnimateDiffWithCameraCtrl,
             LoadAnimateDiffModelWithCameraCtrl,
             CameraCtrlADKeyframeNode,
-            LoadCameraPosesFromFile,
-            LoadCameraPosesFromPath,
+            # LoadCameraPosesFromFile,
+            # LoadCameraPosesFromPath,
             CameraCtrlPoseBasic,
             CameraCtrlPoseCombo,
             CameraCtrlPoseAdvanced,
